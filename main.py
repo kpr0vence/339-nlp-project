@@ -2,10 +2,12 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import os
+import re
 
 links_to_crawl = []
 links_crawled = []
 broken_links = []
+numbers_found = []
 
 
 def crawl_url(url):
@@ -31,6 +33,7 @@ def crawl_url(url):
     if choice.lower() == 'q':
         print("Quitting...")
         save_lists()
+        save_findings()
         return
     
     if len(links_to_crawl) > 0:
@@ -54,7 +57,7 @@ def extract_links_and_add_to_crawl_list(html):
 
         # add base URL if it's a relative link:
         if href.startswith("/"):
-            href = 'https://unca.edu' + href
+            href = 'https://www.stilltasty.com/' + href
 
         # if the link hasn't been crawled yet, add it to the list of links to crawl:
         if href not in links_crawled:
@@ -63,12 +66,25 @@ def extract_links_and_add_to_crawl_list(html):
 def extract_text_from_html(html):
     # do something smart with the html here:
     soup = BeautifulSoup(html, "html.parser")
-    main = soup.find("main")
+    header2 = soup.find("h2").get_text().strip()
+    main = soup.find("body")
     if main:
-        print(main.get_text())
+        print("Body Found")
+        print(header2)
+        get_words_around_numbers(main.get_text(), header2)
     else:
-        print("No main tag found")
+        print("No container body found")
 
+def get_words_around_numbers(text, title):
+    global numbers_found
+    # We have the whole text
+    # Try to get the h2 tag to use as a label
+
+    # Anywhere we spot a number, get the surrounding 2 words on each side
+    targets = re.findall(r"\s*\S+\s*\S+\s*\d\s*\S+\s*\S+s*\S+\s*\S+", text)
+    print(f"Targets: {targets}")
+    numbers_found.insert(title, targets)
+    
 
 def load_lists():
     global links_to_crawl, links_crawled, broken_links
@@ -105,6 +121,12 @@ def save_lists():
         for link in broken_links:
             f.write(link + "\n")
 
+# RN it just overwrites.
+def save_lists():
+    with open("findings.txt", "w") as f:
+        for finding in numbers_found:
+            f.write(finding + "\n")
+
 if __name__ == "__main__":
     load_lists()
-    crawl_url("https://unca.edu")
+    crawl_url("https://www.stilltasty.com/")
